@@ -1,0 +1,55 @@
+.image{
+    width: 100%;
+    height: auto;
+}
+
+.title {
+    text-align: center;
+    font-weight: bold;
+}
+
+table, caption, tbody, tfoot, thead, tr, th, td {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  font-size: 100%;
+  vertical-align: center;
+  background: transparent;
+  border-collapse: collapse;
+  font-weight: 400;
+}
+
+table, th, td {
+  border: 1px solid black;
+  text-align: center;
+}
+
+.thead > tr > th {
+    font-weight: bold;
+}
+
+th {
+    padding: 5px;
+}
+
+.large {
+    width: 100%;
+}
+
+.wrapper {
+    width: 100%;
+}
+
+.small {
+    width: 49%;
+    display: inline-block;
+}
+
+.small:nth-child(1) {
+    margin-right: 5px;
+}
+
+table {
+    width: 100%;
+}
