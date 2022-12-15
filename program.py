@@ -16,7 +16,7 @@ from openpyxl.styles.numbers import FORMAT_PERCENTAGE_00
 from openpyxl.utils import get_column_letter
 
 
-class Salary(object):
+class Salary:
     __currency_to_rub = {
         "AZN": 35.68,
         "BYR": 23.91,
