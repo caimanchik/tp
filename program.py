@@ -197,16 +197,20 @@ class InputConnect:
     def __init__(self):
         self.file_name = None
         self.vacancy = None
+        self.method = None
 
     def read_console(self):
         # if input() == '':
         #     self.file_name = '../vacancies.csv'
         #     self.vacancy = 'Аналитик'
+        #     self.method = 'Статистика'
         # else:
         #     self.file_name = input("Введите название файла: ")
         #     self.vacancy = input("Введите название профессии: ")
+        #     self.method = input("Вакансии или статистика: ")
         self.file_name = input("Введите название файла: ")
         self.vacancy = input("Введите название профессии: ")
+        self.method = input("Вакансии или статистика: ")
 
     @staticmethod
     def write_console(s_all, s_filtered, fract, cities_s):
@@ -562,8 +566,6 @@ salaries_all = dataset.get_vacancies_years()
 salaries_filtered = dataset.get_vacancies_years(lambda x: x.is_suitible(connect.vacancy))
 fraction, cities_salaries = dataset.get_vacancies_cities()
 
-connect.write_console(salaries_all, salaries_filtered, fraction, cities_salaries)
-
 rep = report(connect.vacancy,
              salaries_all,
              salaries_filtered,
@@ -571,6 +573,10 @@ rep = report(connect.vacancy,
              cities_salaries
              )
 
-rep.generate_excel()
-rep.generate_image()
-rep.generate_pdf()
+if connect.method.lower() == 'статистика':
+    connect.write_console(salaries_all, salaries_filtered, fraction, cities_salaries)
+    rep.generate_excel()
+else:
+    rep.generate_excel()
+    rep.generate_image()
+    rep.generate_pdf()
