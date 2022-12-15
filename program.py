@@ -208,13 +208,13 @@ class InputConnect:
         #     self.file_name = input("Введите название файла: ")
         #     self.vacancy = input("Введите название профессии: ")
         #     self.method = input("Вакансии или статистика: ")
+
         self.file_name = input("Введите название файла: ")
         self.vacancy = input("Введите название профессии: ")
         self.method = input("Вакансии или статистика: ")
 
     @staticmethod
     def write_console(s_all, s_filtered, fract, cities_s):
-
         InputConnect.__write_salaries(s_all)
         InputConnect.__write_salaries(s_filtered, ' для выбранной профессии')
 
