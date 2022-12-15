@@ -17,7 +17,6 @@ from openpyxl.utils import get_column_letter
 
 
 class Salary(object):
-
     __currency_to_rub = {
         "AZN": 35.68,
         "BYR": 23.91,
@@ -68,7 +67,6 @@ class Vacancy:
             fields_cases[title[i]](field)
 
         self.__set_salary()
-
 
     def get_salary(self) -> float:
         return float(self.__salary)
@@ -280,7 +278,16 @@ class HelpMethods:
 
 class report:
 
-    def __init__(self, vacancy: str):
+    def __init__(self, vacancy: str,
+                 s_all: Dict[str, List[int]],
+                 s_filtered: Dict[str, List[int]],
+                 fract: List[List[float]],
+                 cities_s: List[List[int]]):
+        self.__salaries_all = s_all
+        self.__salaries_filtered = s_filtered
+        self.__fraction = fract
+        self.__cities_salaries = cities_s
+        self.__vacancy = vacancy
 
         self.__names_ws1 = {
             'A1': 'Год',
@@ -296,23 +303,176 @@ class report:
             'D1': 'Город',
             'E1': 'Доля вакансий'
         }
+        self.__titles = [
+            'Уровень зарплат по годам',
+            'Количество вакансий по годам',
+            'Уровень зарплат по городам',
+            'Доля вакансий по городам',
+        ]
 
-    def generate_excel(
-            self,
-            s_all: Dict[str, List[int]],
-            s_filtered: Dict[str, List[int]],
-            fract: List[List[float]],
-            cities_s: List[List[int]]
-    ):
+    def generate_excel(self):
         wb = Workbook()
 
         ws1 = wb.active
         ws2 = wb.create_sheet('Статистика по городам')
 
-        report.__make_ws1(ws1, s_all, s_filtered, self.__names_ws1)
-        report.__make_ws2(ws2, fract, cities_s, self.__names_ws2)
+        report.__make_ws1(ws1, self.__salaries_all, self.__salaries_filtered, self.__names_ws1)
+        report.__make_ws2(ws2, self.__fraction, self.__cities_salaries, self.__names_ws2)
 
         wb.save('report.xlsx')
+
+    def generate_image(self):
+        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
+
+        self.__create_bar(
+            ax1,
+            self.__salaries_all,
+            self.__salaries_filtered,
+            0,
+            ['Средняя з/п', f'З/п {self.__vacancy}'],
+            self.__titles[0]
+        )
+
+        self.__create_bar(
+            ax2,
+            self.__salaries_all,
+            self.__salaries_filtered,
+            1,
+            ['Количество вакансий', f'Количество вакансий {self.__vacancy}'],
+            self.__titles[1]
+        )
+
+        self.__create_barh(ax3, self.__cities_salaries[:10], self.__titles[2])
+        self.__create_pie(ax4, self.__fraction[:10], self.__titles[3])
+
+        fig.tight_layout()
+        fig.set_size_inches(8, 6)
+        fig.set_dpi(300)
+        fig.savefig('graph.png', dpi=300)
+
+        plt.show()
+
+    def generate_pdf(self):
+        env = Environment(loader=FileSystemLoader('.'))
+        template = env.get_template("template.html")
+        config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
+        path = os.path.abspath('')
+        rows_1 = self.__generate_rows_1(self.__salaries_all, self.__salaries_filtered)
+        rows_2, rows_3 = self.__generate_rows_23(self.__fraction, self.__cities_salaries)
+
+        context = {
+            'path': path,
+            'vacancy': self.__vacancy,
+            'rows1': rows_1,
+            'rows2': rows_2,
+            'rows3': rows_3,
+        }
+
+        pdf_template = template.render(context)
+        pdfkit.from_string(pdf_template, 'report.pdf', configuration=config, options={"enable-local-file-access": None})
+
+    @staticmethod
+    def __generate_rows_1(s_all: Dict[str, List[int]], s_filtered: Dict[str, List[int]]) -> List[Dict[str, str | int]]:
+        rows = []
+        for key in s_all.keys():
+            row = {
+                'year': key,
+                'average': s_all[key][0],
+                'average_v': s_filtered[key][0],
+                'count': s_all[key][1],
+                'count_v': s_filtered[key][1],
+            }
+
+            rows.append(row)
+
+        return rows
+
+    @staticmethod
+    def __generate_rows_23(fract: List[List[float]], cities_s: List[List[int]]) \
+            -> Tuple[List[Dict[str, int]], List[Dict[str, float]]]:
+        count = 10
+        rows_2 = []
+        rows_3 = []
+
+        for i in range(count):
+            row = {
+                'city': cities_s[i][0],
+                'salary': cities_s[i][1]
+            }
+
+            rows_2.append(row)
+
+            row = {
+                'city': fract[i][0],
+                'fraction': str(round(fract[i][1] * 100, 2)) + '%'
+            }
+            rows_3.append(row)
+
+        return rows_2, rows_3
+
+    @staticmethod
+    def __create_bar(
+            ax,
+            data1: Dict[str, List[int]],
+            data2: Dict[str, List[int]],
+            index: int,
+            legend: List[str],
+            title: str
+    ):
+        width = 0.35
+        labels_x = data1.keys()
+        first = report.__get_data(data1, index)
+        second = report.__get_data(data2, index)
+        points = range(len(labels_x))
+
+        ax.bar(list(map(lambda x: x - width / 2, points)), first, width, label=legend[0])
+        ax.bar(list(map(lambda x: x + width / 2, points)), second, width, label=legend[1])
+        ax.set_title(title)
+        ax.legend(prop={'size': 8})
+        ax.grid(axis='y')
+
+        for label in ax.get_yticklabels():
+            label.set_fontsize(8)
+
+        ax.set_xticks(points, labels_x, fontsize=8, rotation=90)
+
+    @staticmethod
+    def __create_barh(ax, data: List[List[float]], title: str):
+        cities = list(map(lambda x: report.__refactor_label(x[0]), data))
+        y_pos = list(range(len(cities)))
+
+        ax.barh(y_pos, list(map(lambda x: x[1], data)), align='center')
+
+        ax.set_yticks(y_pos, labels=cities, fontsize=6)
+        ax.invert_yaxis()
+        ax.grid(axis='x')
+
+        for label in ax.get_xticklabels():
+            label.set_fontsize(8)
+
+        ax.set_title(title)
+
+    @staticmethod
+    def __create_pie(ax, data: List[List[float]], title: str):
+        cities = list(map(lambda x: x[0], data)) + ['Другие']
+        others = 1 - reduce(lambda x, y: x + y[1], data, 0)
+
+        ax.pie(list(map(lambda x: x[1], data)) + [others],
+               labels=cities, textprops={'size': 6}, colors=mcolors.BASE_COLORS)
+
+        ax.set_title(title)
+
+    @staticmethod
+    def __refactor_label(label: str) -> str:
+        spaces = re.compile('\s+')
+        line = re.compile('-+')
+
+        label = re.sub(spaces, '\n', label)
+        return re.sub(line, '-\n', label)
+
+    @staticmethod
+    def __get_data(data: Dict[str, List[int]], i: int) -> List[int]:
+        return list(map(lambda x: x[i], data.values()))
 
     @staticmethod
     def __make_ws1(
@@ -335,7 +495,6 @@ class report:
 
         report.__set_border(ws, f'A1:E{len(s_all) + 1}')
         report.__refactor_rows(ws)
-
 
     @staticmethod
     def __make_ws2(
@@ -394,193 +553,6 @@ class report:
             ws.column_dimensions[get_column_letter(i + 1)].width = l + 3 if l != 0 else 0
 
 
-class graph:
-
-    __titles = [
-        'Уровень зарплат по годам',
-        'Количество вакансий по годам',
-        'Уровень зарплат по городам',
-        'Доля вакансий по городам',
-    ]
-
-    def __init__(self, vacancy: str):
-        self.__vacancy = vacancy
-
-    def draw(
-            self,
-            s_all: Dict[str, List[int]],
-            s_filtered: Dict[str, List[int]],
-            fract: List[List[float]],
-            cities_s: List[List[int]]
-    ):
-        fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
-
-        graph.__create_bar(
-            ax1,
-            s_all,
-            s_filtered,
-            0,
-            ['Средняя з/п', f'З/п {self.__vacancy}'],
-            graph.__titles[0]
-        )
-
-        graph.__create_bar(
-            ax2,
-            s_all,
-            s_filtered,
-            1,
-            ['Количество вакансий', f'Количество вакансий {self.__vacancy}'],
-            graph.__titles[1]
-        )
-
-        graph.__create_barh(ax3, cities_s[:10], graph.__titles[2])
-        graph.__create_pie(ax4, fract[:10], graph.__titles[3])
-
-        fig.tight_layout()
-        fig.set_size_inches(8, 6)
-        fig.set_dpi(300)
-        fig.savefig('graph.png', dpi=300)
-
-        plt.show()
-
-
-    @staticmethod
-    def __create_bar(
-            ax,
-            data1: Dict[str, List[int]],
-            data2: Dict[str, List[int]],
-            index: int,
-            legend: List[str],
-            title: str
-    ):
-        width = 0.35
-        labels_x = data1.keys()
-        first = graph.__get_data(data1, index)
-        second = graph.__get_data(data2, index)
-        points = range(len(labels_x))
-
-        ax.bar(list(map(lambda x: x - width / 2, points)), first, width, label=legend[0])
-        ax.bar(list(map(lambda x: x + width / 2, points)), second, width, label=legend[1])
-        ax.set_title(title)
-        ax.legend(prop={'size': 8})
-        ax.grid(axis='y')
-
-        for label in ax.get_yticklabels():
-            label.set_fontsize(8)
-
-        ax.set_xticks(points, labels_x, fontsize=8, rotation=90)
-
-    @staticmethod
-    def __create_barh(ax, data: List[List[float]], title: str):
-        cities = list(map(lambda x: graph.__refactor_label(x[0]), data))
-        y_pos = list(range(len(cities)))
-
-        ax.barh(y_pos, list(map(lambda x: x[1], data)), align='center')
-
-        ax.set_yticks(y_pos, labels=cities, fontsize=6)
-        ax.invert_yaxis()
-        ax.grid(axis='x')
-
-        for label in ax.get_xticklabels():
-            label.set_fontsize(8)
-
-        ax.set_title(title)
-
-    @staticmethod
-    def __create_pie(ax, data: List[List[float]], title: str):
-        cities = list(map(lambda x: x[0], data)) + ['Другие']
-        others = 1 - reduce(lambda x, y: x + y[1], data, 0)
-
-        ax.pie(list(map(lambda x: x[1], data)) + [others],
-               labels=cities, textprops={'size': 6}, colors=mcolors.BASE_COLORS)
-
-        ax.set_title(title)
-
-    @staticmethod
-    def __refactor_label(label: str) -> str:
-        spaces = re.compile('\s+')
-        line = re.compile('-+')
-
-        label = re.sub(spaces, '\n', label)
-        return re.sub(line, '-\n', label)
-
-
-    @staticmethod
-    def __get_data(data: Dict[str, List[int]], i: int) -> List[int]:
-        return list(map(lambda x: x[i], data.values()))
-
-
-class pdf:
-
-    def __init__(self, vacancy: str):
-        self.__vacancy = vacancy
-
-    def create(
-            self,
-            s_all: Dict[str, List[int]],
-            s_filtered: Dict[str, List[int]],
-            fract: List[List[float]],
-            cities_s: List[List[int]]
-    ):
-        env = Environment(loader=FileSystemLoader('.'))
-        template = env.get_template("template.html")
-        config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
-        path = os.path.abspath('')
-        rows_1 = pdf.__generate_rows_1(s_all, s_filtered)
-        rows_2, rows_3 = pdf.__generate_rows_23(fract, cities_s)
-
-        context = {
-            'path': path,
-            'vacancy': self.__vacancy,
-            'rows1': rows_1,
-            'rows2': rows_2,
-            'rows3': rows_3,
-        }
-
-        pdf_template = template.render(context)
-        pdfkit.from_string(pdf_template, 'report.pdf', configuration=config, options={"enable-local-file-access": None})
-
-
-    @staticmethod
-    def __generate_rows_1(s_all: Dict[str, List[int]], s_filtered: Dict[str, List[int]]) -> List[Dict[str, str | int]]:
-        rows = []
-        for key in s_all.keys():
-            row = {
-                'year': key,
-                'average': s_all[key][0],
-                'average_v': s_filtered[key][0],
-                'count': s_all[key][1],
-                'count_v': s_filtered[key][1],
-            }
-
-            rows.append(row)
-
-        return rows
-
-    @staticmethod
-    def __generate_rows_23(fract: List[List[float]], cities_s: List[List[int]]) \
-            -> Tuple[List[Dict[str, int]], List[Dict[str, float]]]:
-        count = 10
-        rows_2 = []
-        rows_3 = []
-
-        for i in range(count):
-            row = {
-                'city': cities_s[i][0],
-                'salary': cities_s[i][1]
-            }
-
-            rows_2.append(row)
-
-            row = {
-                'city': fract[i][0],
-                'fraction': str(round(fract[i][1] * 100, 2)) + '%'
-            }
-            rows_3.append(row)
-
-        return rows_2, rows_3
-
-
 connect = InputConnect()
 connect.read_console()
 
@@ -592,26 +564,13 @@ fraction, cities_salaries = dataset.get_vacancies_cities()
 
 connect.write_console(salaries_all, salaries_filtered, fraction, cities_salaries)
 
-rep = report(connect.vacancy)
-rep.generate_excel(
-    salaries_all,
-    salaries_filtered,
-    fraction,
-    cities_salaries
-)
+rep = report(connect.vacancy,
+             salaries_all,
+             salaries_filtered,
+             fraction,
+             cities_salaries
+             )
 
-gr = graph(connect.vacancy)
-gr.draw(
-    salaries_all,
-    salaries_filtered,
-    fraction,
-    cities_salaries
-)
-
-pdf_control = pdf(connect.vacancy)
-pdf_control.create(
-    salaries_all,
-    salaries_filtered,
-    fraction,
-    cities_salaries
-)
+rep.generate_excel()
+rep.generate_image()
+rep.generate_pdf()
