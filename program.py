@@ -564,17 +564,17 @@ dataset = DataSet(connect.file_name)
 
 salaries_all = dataset.get_vacancies_years()
 salaries_filtered = dataset.get_vacancies_years(lambda x: x.is_suitible(connect.vacancy))
-fr, cities_salaries = dataset.get_vacancies_cities()
+f, cities_salaries = dataset.get_vacancies_cities()
 
 rep = report(connect.vacancy,
              salaries_all,
              salaries_filtered,
-             fr,
+             f,
              cities_salaries
              )
 
 if connect.method.lower() == 'статистика':
-    connect.write_console(salaries_all, salaries_filtered, fr, cities_salaries)
+    connect.write_console(salaries_all, salaries_filtered, f, cities_salaries)
     rep.generate_excel()
 else:
     rep.generate_excel()
