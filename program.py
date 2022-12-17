@@ -16,9 +16,6 @@ from openpyxl.styles.numbers import FORMAT_PERCENTAGE_00
 from openpyxl.utils import get_column_letter
 
 
-# не стал указывать типы передаваемых переменных в методы, так как изначально написал типизированный код
-
-
 class Salary:
     """
     Класс для представления зарплаты
@@ -36,17 +33,38 @@ class Salary:
         "UZS": 0.0055,
     }
 
-    def __init__(self, values: List[str]):
+    def __init__(self, values: List[str | float]):
         """
         Инициализирует объект Salary
 
         Args:
             values (List[str]): Нижняя граница оклада, верхняя граница оклада, валюта оклада
+
+        >>> type(Salary([10.0, 15.0, 'RUR'])).__name__
+        'Salary'
+        >>> Salary([10.0, 15.0, 'RUR'])._Salary__salary_from
+        10.0
+        >>> Salary([10.0, 15.0, 'RUR'])._Salary__salary_to
+        15.0
+        >>> Salary([10.0, 15.0, 'RUR'])._Salary__salary_currency
+        'RUR'
         """
-        [self.__salary_from, self.__salary_to, self.__salary_currency] = values
+        [self.__salary_from, self.__salary_to, self.__salary_currency] \
+            = [float(values[0]), float(values[1]), values[2]]
 
     def __float__(self) -> float:
-        """Преобразует зарплату к float значению в рублях"""
+        """
+        Преобразует зарплату к float значению в рублях
+
+        >>> float(Salary([10.0, 20.0, 'RUR']))
+        15.0
+        >>> float(Salary([10.0, 20, 'RUR']))
+        15.0
+        >>> float(Salary([10, 20.0, 'RUR']))
+        15.0
+        >>> float(Salary([10.0, 30.0, 'EUR']))
+        1198.0
+        """
         return (float(self.__salary_from) + float(self.__salary_to)) / 2 * self.__currency_to_rub[
             self.__salary_currency.upper()]
 
@@ -61,6 +79,17 @@ class Vacancy:
 
         :param row: Строка с вакансией из csv файла
         :param title: Названия столбцов csv файла
+
+        >>> type(Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at'])).__name__
+        'Vacancy'
+        >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).get_salary()
+        90000.0
+        >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).get_area()
+        'Санкт-Петербург'
+        >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).get_date()
+        '2022'
+        >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).is_suitible('Руководитель')
+        True
         """
         self.__name = None
         self.__salary = None
@@ -94,7 +123,7 @@ class Vacancy:
         return float(self.__salary)
 
     def get_date(self) -> str:
-        """Возвращает дату размещения вакансии"""
+        """Возвращает год размещения вакансии"""
         return self.__published_at
 
     def get_area(self) -> str:
@@ -138,8 +167,12 @@ class DataSet:
         """
         Инициализирует объект Dataset
         :param file_name: Название файла
+
+        >>> type(DataSet('tests/test.csv')).__name__
+        'DataSet'
+        >>> DataSet('tests/test.csv')._DataSet__len
+        1
         """
-        self.__file_name = file_name
         self.__vacancies_objects: List[Vacancy] = []
         self.__title = None
         self.__vacancies_years = {}
@@ -354,29 +387,40 @@ class HelpMethods:
     Класс, содержащий в себе вспомогатильные функции которые могут быть переиспользованы
     """
     @staticmethod
-    def quit_program(message):
-        """
-        Завершить программу, предварительно напечатав сообщение в консоль
-        :param message: Сообщение
-        """
-        print(message)
-        quit()
-
-    @staticmethod
     def delete_rubbish(s: str) -> str:
         """
         Удаляет html теги и лишние пробелы из строки
         :param s: Строка для чистки
         :return: Очищенная строка
+
+        >>> HelpMethods.delete_rubbish('<strong>Test string</strong>')
+        'Test string'
+        >>> HelpMethods.delete_rubbish('     <p>Test    string   </p>')
+        'Test string'
+        >>> HelpMethods.delete_rubbish('Test string')
+        'Test string'
         """
         rubbish_html = re.compile('<.*?>')
 
         return ' '.join(re.sub(rubbish_html, '', s).split()).strip()
 
+    @staticmethod
+    def refactor_label(label: str) -> str:
+        """
+        Форматирование подписи круговой даиграммы
+        :param label: Подпись
+        :return: Отформатированная подпись
+        """
+        spaces = re.compile('\s+')
+        line = re.compile('-+')
+
+        label = re.sub(spaces, '\n', label)
+        return re.sub(line, '-\n', label)
+
 
 class report:
     """
-    Класс для представления разлияных видов отчетов
+    Класс для представления различных видов отчетов
     """
     def __init__(self, vacancy: str,
                  s_all: Dict[str, List[int]],
@@ -582,7 +626,7 @@ class report:
         :param data: Массив с долями вакансий по городам
         :param title: Название диаграммы
         """
-        cities = list(map(lambda x: report.__refactor_label(x[0]), data))
+        cities = list(map(lambda x: HelpMethods.refactor_label(x[0]), data))
         y_pos = list(range(len(cities)))
 
         ax.barh(y_pos, list(map(lambda x: x[1], data)), align='center')
@@ -611,19 +655,6 @@ class report:
                labels=cities, textprops={'size': 6}, colors=mcolors.BASE_COLORS)
 
         ax.set_title(title)
-
-    @staticmethod
-    def __refactor_label(label: str) -> str:
-        """
-        Форматирование подписи круговой даиграммы
-        :param label: Подпись
-        :return: Отформатированная подпись
-        """
-        spaces = re.compile('\s+')
-        line = re.compile('-+')
-
-        label = re.sub(spaces, '\n', label)
-        return re.sub(line, '-\n', label)
 
     @staticmethod
     def __get_data(data: Dict[str, List[int]], i: int) -> List[int]:
@@ -748,26 +779,27 @@ class report:
             ws.column_dimensions[get_column_letter(i + 1)].width = l + 3 if l != 0 else 0
 
 
-connect = InputConnect()
-connect.read_console()
+if __name__ == '__main__':
+    connect = InputConnect()
+    connect.read_console()
 
-dataset = DataSet(connect.file_name)
+    dataset = DataSet(connect.file_name)
 
-salaries_all = dataset.get_vacancies_years()
-salaries_filtered = dataset.get_vacancies_years(lambda x: x.is_suitible(connect.vacancy))
-fraction, cities_salaries = dataset.get_vacancies_cities()
+    salaries_all = dataset.get_vacancies_years()
+    salaries_filtered = dataset.get_vacancies_years(lambda x: x.is_suitible(connect.vacancy))
+    fraction, cities_salaries = dataset.get_vacancies_cities()
 
-rep = report(connect.vacancy,
-             salaries_all,
-             salaries_filtered,
-             fraction,
-             cities_salaries
-             )
+    rep = report(connect.vacancy,
+                 salaries_all,
+                 salaries_filtered,
+                 fraction,
+                 cities_salaries
+                 )
 
-if connect.method.lower() == 'статистика':
-    connect.write_console(salaries_all, salaries_filtered, fraction, cities_salaries)
-    rep.generate_excel()
-else:
-    rep.generate_excel()
-    rep.generate_image()
-    rep.generate_pdf()
+    if connect.method.lower() == 'статистика':
+        connect.write_console(salaries_all, salaries_filtered, fraction, cities_salaries)
+        rep.generate_excel()
+    else:
+        rep.generate_excel()
+        rep.generate_image()
+        rep.generate_pdf()
