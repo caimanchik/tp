@@ -16,7 +16,13 @@ from openpyxl.styles.numbers import FORMAT_PERCENTAGE_00
 from openpyxl.utils import get_column_letter
 
 
+# не стал указывать типы передаваемых переменных в методы, так как изначально написал типизированный код
+
+
 class Salary:
+    """
+    Класс для представления зарплаты
+    """
     __currency_to_rub = {
         "AZN": 35.68,
         "BYR": 23.91,
@@ -31,16 +37,31 @@ class Salary:
     }
 
     def __init__(self, values: List[str]):
+        """
+        Инициализирует объект Salary
+
+        Args:
+            values (List[str]): Нижняя граница оклада, верхняя граница оклада, валюта оклада
+        """
         [self.__salary_from, self.__salary_to, self.__salary_currency] = values
 
-    def __float__(self):
+    def __float__(self) -> float:
+        """Преобразует зарплату к float значению в рублях"""
         return (float(self.__salary_from) + float(self.__salary_to)) / 2 * self.__currency_to_rub[
             self.__salary_currency.upper()]
 
 
 class Vacancy:
+    """Класс для представления вакансии"""
 
     def __init__(self, row: List[str], title: List[str]):
+        """
+        Инициализирует объект класса Vacancy
+
+
+        :param row: Строка с вакансией из csv файла
+        :param title: Названия столбцов csv файла
+        """
         self.__name = None
         self.__salary = None
         self.__area_name = None
@@ -69,31 +90,55 @@ class Vacancy:
         self.__set_salary()
 
     def get_salary(self) -> float:
+        """Возращает зарплату в рублях для данной вакансии"""
         return float(self.__salary)
 
     def get_date(self) -> str:
+        """Возвращает дату размещения вакансии"""
         return self.__published_at
 
     def get_area(self) -> str:
+        """Возвращает город, в котором размещена данная вакансия"""
         return self.__area_name
 
     def is_suitible(self, name: str) -> bool:
+        """
+        Содержит ли в названии name
+
+        :param name: Название вакансии
+        """
         return self.__name.count(name) > 0
 
     def __set_value(self, key, value):
+        """
+        Метод для инициализации приватных полей объекта
+        :param key: Название поля
+        :param value: Значение поля
+        """
         self.__dict__['_Vacancy__' + key] = value
 
     def __set_salary(self):
+        """Инициализирует зарплату при инициализации объекта"""
         self.__salary = Salary([self.__salary_from, self.__salary_to, self.__salary_currency])
 
     @staticmethod
     def __get_date(date: str) -> str:
+        """
+        Вычисляет из строки год
+        :param date: Дата
+        :return: float: Год
+        """
         return str(datetime.fromisoformat(date[:-2] + ":" + date[-2:]).year)
 
 
 class DataSet:
+    """Класс, представляющий набор данных обо всех вакансиях"""
 
-    def __init__(self, file_name):
+    def __init__(self, file_name: str):
+        """
+        Инициализирует объект Dataset
+        :param file_name: Название файла
+        """
         self.__file_name = file_name
         self.__vacancies_objects: List[Vacancy] = []
         self.__title = None
@@ -116,13 +161,11 @@ class DataSet:
                 self.__validate_vacancy(row)
                 self.__len += 1
 
-    def __check_dataset(self):
-        if self.__title is None:
-            HelpMethods.quit_program('Пустой файл')
-        if len(self.__vacancies_years) == 0:
-            HelpMethods.quit_program('Нет данных')
-
     def __validate_vacancy(self, row: List[str]):
+        """
+        Парсит валидную строку csv файла
+        :param row: Строка
+        """
         vacancy = Vacancy(row, self.__title)
 
         now_date = self.__vacancies_years.get(vacancy.get_date(), [])
@@ -134,6 +177,12 @@ class DataSet:
         self.__vacancies_areas[vacancy.get_area()] = now_area
 
     def get_vacancies_years(self, func=None) -> Dict[str, List[int]]:
+        """
+        Создает словарь с ключами-годами и значениями - массивами из зарплат в соответствии с фильтрующей
+        функцией
+        :param func: Фильтрующая функция
+        :return: Словарь с массивами зарплат по годам
+        """
         if func is None:
             return DataSet.get_structured_salaries(self.__vacancies_years)
 
@@ -148,10 +197,38 @@ class DataSet:
         return DataSet.get_structured_salaries(result)
 
     def get_vacancies_cities(self) -> Tuple[List[List[float]], List[List[int]]]:
-        return DataSet.get_structured_cities(self.__vacancies_areas, self.__len)
+        """
+        Создает кортеж из листов с долями вакансий и уровнем зарплат по городам
+        :return: Кортеж из листов с долями вакансий и уровнем зарплат по городам
+        """
+        cities_s = []
+        fract = []
+
+        for key, value in self.__vacancies_areas.items():
+
+            percent = round(len(value) / self.__len, 4)
+            if percent < 0.01:
+                continue
+
+            summ = 0
+            for vacancy in self.__vacancies_areas[key]:
+                summ += vacancy.get_salary()
+
+            cities_s.append([key, math.floor(summ / len(value))])
+            fract.append([key, percent])
+
+        fract.sort(key=lambda x: x[1], reverse=True)
+        cities_s.sort(key=lambda x: x[1], reverse=True)
+
+        return fract, cities_s
 
     @staticmethod
     def get_structured_salaries(vacancies: Dict[str, list]) -> Dict[str, List[int]]:
+        """
+        Создает словарь с ключами-годами и значениями - массивами из зарплат
+        :param vacancies: Датасет вакансий
+        :return: Словарь с ключами-годами и значениями - массивами из зарплат
+        """
         salaries = {}
 
         for i, year in enumerate(vacancies.keys()):
@@ -167,54 +244,51 @@ class DataSet:
 
         return salaries
 
-    @staticmethod
-    def get_structured_cities(vacancies: Dict[str, list], l: int) -> Tuple[List[List[float]], List[List[int]]]:
-
-        cities_s = []
-        fract = []
-
-        for key, value in vacancies.items():
-
-            percent = round(len(value) / l, 4)
-            if percent < 0.01:
-                continue
-
-            summ = 0
-            for vacancy in vacancies[key]:
-                summ += vacancy.get_salary()
-
-            cities_s.append([key, math.floor(summ / len(value))])
-            fract.append([key, percent])
-
-        fract.sort(key=lambda x: x[1], reverse=True)
-        cities_s.sort(key=lambda x: x[1], reverse=True)
-
-        return fract, cities_s
-
 
 class InputConnect:
+    """
+    Класс, представляющий взаимодействие пользователся и программы
+
+    Attributes:
+        file_name (str): Название файла
+        vacancy (str): Название профессии для фильтрации
+        method (str): Метод вывода данных
+    """
 
     def __init__(self):
+        """
+        Инициализирует объект класса InputConnect
+        """
         self.file_name = None
         self.vacancy = None
         self.method = None
 
     def read_console(self):
-        # if input() == '':
-        #     self.file_name = '../vacancies.csv'
-        #     self.vacancy = 'Аналитик'
-        #     self.method = 'Статистика'
-        # else:
-        #     self.file_name = input("Введите название файла: ")
-        #     self.vacancy = input("Введите название профессии: ")
-        #     self.method = input("Вакансии или статистика: ")
+        """
+        Метод для чтения данных с консоли и их сохранения
+        """
+        if input() == '':
+            self.file_name = '../vacancies.csv'
+            self.vacancy = 'Аналитик'
+            self.method = 'Вакансии'
+        else:
+            self.file_name = input("Введите название файла: ")
+            self.vacancy = input("Введите название профессии: ")
+            self.method = input("Вакансии или статистика: ")
 
-        self.file_name = input("Введите название файла: ")
-        self.vacancy = input("Введите название профессии: ")
-        self.method = input("Вакансии или статистика: ")
+        # self.file_name = input("Введите название файла: ")
+        # self.vacancy = input("Введите название профессии: ")
+        # self.method = input("Вакансии или статистика: ")
 
     @staticmethod
     def write_console(s_all, s_filtered, fract, cities_s):
+        """
+        Метод для вывода вакансий в консоль
+        :param s_all: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param s_filtered: Словарь с ключами-годами и значениями - массивами из зарплат для выбранной профессии
+        :param fract: Доли вакансий по городам
+        :param cities_s: Средние зарплаты по городам
+        """
         InputConnect.__write_salaries(s_all)
         InputConnect.__write_salaries(s_filtered, ' для выбранной профессии')
 
@@ -222,6 +296,11 @@ class InputConnect:
 
     @staticmethod
     def __write_salaries(salaries: Dict[str, List[int]], sufix=''):
+        """
+        Выводит в консоль словарь с ключами-годами и значениями - массивами из зарплат
+        :param salaries: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param sufix: Доп параметр для печати
+        """
         s = f'Динамика уровня зарплат по годам{sufix}' + ': {'
 
         print(s, end='')
@@ -248,7 +327,11 @@ class InputConnect:
 
     @staticmethod
     def __write_salaries_cities(fract: List[List[float]], cities_s: List[List[int]]):
-
+        """
+        Выводит уровень зарплат и доли вакансий по городам в консоль
+        :param fract: Доля вакансий по городам
+        :param cities_s: Средние зарплаты по городам
+        """
         print('Уровень зарплат по городам (в порядке убывания): {', end='')
         for i, e in enumerate(cities_s[:10]):
             if i != 0:
@@ -267,26 +350,47 @@ class InputConnect:
 
 
 class HelpMethods:
-
+    """
+    Класс, содержащий в себе вспомогатильные функции которые могут быть переиспользованы
+    """
     @staticmethod
     def quit_program(message):
+        """
+        Завершить программу, предварительно напечатав сообщение в консоль
+        :param message: Сообщение
+        """
         print(message)
         quit()
 
     @staticmethod
     def delete_rubbish(s: str) -> str:
+        """
+        Удаляет html теги и лишние пробелы из строки
+        :param s: Строка для чистки
+        :return: Очищенная строка
+        """
         rubbish_html = re.compile('<.*?>')
 
         return ' '.join(re.sub(rubbish_html, '', s).split()).strip()
 
 
 class report:
-
+    """
+    Класс для представления разлияных видов отчетов
+    """
     def __init__(self, vacancy: str,
                  s_all: Dict[str, List[int]],
                  s_filtered: Dict[str, List[int]],
                  fract: List[List[float]],
                  cities_s: List[List[int]]):
+        """
+        Инициализирует объект класса report
+        :param vacancy: Вакансия, по которой была произведена фильтрация
+        :param s_all: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param s_filtered: Словарь с ключами-годами и значениями - массивами из зарплат для выбранной профессии
+        :param fract: Доли вакансий по городам
+        :param cities_s: Средние зарплаты по городам
+        """
         self.__salaries_all = s_all
         self.__salaries_filtered = s_filtered
         self.__fraction = fract
@@ -315,6 +419,9 @@ class report:
         ]
 
     def generate_excel(self):
+        """
+        Метод для генерации excel отчета
+        """
         wb = Workbook()
 
         ws1 = wb.active
@@ -326,6 +433,9 @@ class report:
         wb.save('report.xlsx')
 
     def generate_image(self):
+        """
+        Метод для генерации графиков
+        """
         fig, ((ax1, ax2), (ax3, ax4)) = plt.subplots(nrows=2, ncols=2)
 
         self.__create_bar(
@@ -357,6 +467,9 @@ class report:
         plt.show()
 
     def generate_pdf(self):
+        """
+        Метод для генерации отчета в формате pdf
+        """
         env = Environment(loader=FileSystemLoader('.'))
         template = env.get_template("template.html")
         config = pdfkit.configuration(wkhtmltopdf='/usr/local/bin/wkhtmltopdf')
@@ -377,6 +490,12 @@ class report:
 
     @staticmethod
     def __generate_rows_1(s_all: Dict[str, List[int]], s_filtered: Dict[str, List[int]]) -> List[Dict[str, str | int]]:
+        """
+        Метод для получения списка со статистикой по годам
+        :param s_all: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param s_filtered: Словарь с ключами-годами и значениями - массивами из зарплат для выбранной профессии
+        :return: Массив со статистикой по годам
+        """
         rows = []
         for key in s_all.keys():
             row = {
@@ -394,6 +513,12 @@ class report:
     @staticmethod
     def __generate_rows_23(fract: List[List[float]], cities_s: List[List[int]]) \
             -> Tuple[List[Dict[str, int]], List[Dict[str, float]]]:
+        """
+        Получение кортежа из списков со статистикой по городам
+        :param fract: Доли вакансий по городам
+        :param cities_s: Средние зарплаты по городам
+        :return: Кортеж из массивов со статистикой по городам
+        """
         count = 10
         rows_2 = []
         rows_3 = []
@@ -423,6 +548,15 @@ class report:
             legend: List[str],
             title: str
     ):
+        """
+        Метод для создания столбчатой диаграммы
+        :param ax: ax
+        :param data1: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param data2: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param index: Индекс используемых зарплат
+        :param legend: Массив для подписей в легенде
+        :param title: Название диаграммы
+        """
         width = 0.35
         labels_x = data1.keys()
         first = report.__get_data(data1, index)
@@ -442,6 +576,12 @@ class report:
 
     @staticmethod
     def __create_barh(ax, data: List[List[float]], title: str):
+        """
+        Метод для создания горизонстальной диаграммы
+        :param ax: ax
+        :param data: Массив с долями вакансий по городам
+        :param title: Название диаграммы
+        """
         cities = list(map(lambda x: report.__refactor_label(x[0]), data))
         y_pos = list(range(len(cities)))
 
@@ -458,6 +598,12 @@ class report:
 
     @staticmethod
     def __create_pie(ax, data: List[List[float]], title: str):
+        """
+        Метод для создания круговой диаграммы
+        :param ax: ax
+        :param data: Массив с долями вакансий
+        :param title: Название диаграммы
+        """
         cities = list(map(lambda x: x[0], data)) + ['Другие']
         others = 1 - reduce(lambda x, y: x + y[1], data, 0)
 
@@ -468,6 +614,11 @@ class report:
 
     @staticmethod
     def __refactor_label(label: str) -> str:
+        """
+        Форматирование подписи круговой даиграммы
+        :param label: Подпись
+        :return: Отформатированная подпись
+        """
         spaces = re.compile('\s+')
         line = re.compile('-+')
 
@@ -476,6 +627,12 @@ class report:
 
     @staticmethod
     def __get_data(data: Dict[str, List[int]], i: int) -> List[int]:
+        """
+        Метод для получения массива с данными для графика
+        :param data: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param i: Индекс нужного элемента в массиве
+        :return: Массив с данными для графика
+        """
         return list(map(lambda x: x[i], data.values()))
 
     @staticmethod
@@ -485,6 +642,13 @@ class report:
             s_filtered: Dict[str, List[int]],
             title: Dict[str, str]
     ):
+        """
+        Метод для заполнения первого листа excel отчета
+        :param ws: Лист
+        :param s_all: Словарь с ключами-годами и значениями - массивами из зарплат
+        :param s_filtered: Словарь с ключами-годами и значениями - массивами из зарплат для данной профессии
+        :param title: Название листа
+        """
         ws.title = 'Статистика по годам'
         report.__create_title(ws, title)
 
@@ -507,6 +671,13 @@ class report:
             cities_s: List[List[int]],
             title: Dict[str, str]
     ):
+        """
+        Метод для заполнения второго листа excel отчета
+        :param ws: Лист
+        :param fract: Массив с долями вакансий по городам
+        :param cities_s: Массив с уровнем зарплат по городам
+        :param title: Название листа
+        """
         report.__create_title(ws, title)
         count = 10
 
@@ -526,11 +697,22 @@ class report:
 
     @staticmethod
     def __add_percentage(ws, count: int, column: str):
+        """
+        Добавить процентный формат данных определенному столбцу
+        :param ws: Лист
+        :param count: Количество строк
+        :param column: Колонка
+        """
         for i in range(2, count + 2):
             ws[f'{column}{i}'].number_format = FORMAT_PERCENTAGE_00
 
     @staticmethod
     def __set_border(ws, cell_range):
+        """
+        Добавить границы диапазону ячеек
+        :param ws: Лист
+        :param cell_range: Диапазон ячеек
+        """
         line = Side(border_style="thin", color="000000")
         border = Border(top=line, left=line, right=line, bottom=line)
 
@@ -540,6 +722,11 @@ class report:
 
     @staticmethod
     def __create_title(ws, title: Dict[str, str]):
+        """
+        Добавить названия для стобцов
+        :param ws: Лист
+        :param title: Названия столбцов по ячейкам
+        """
         font = Font(bold=True)
 
         for key, value in title.items():
@@ -548,6 +735,10 @@ class report:
 
     @staticmethod
     def __refactor_rows(ws):
+        """
+        Установить минимально возможную ширину для ячеек на листе
+        :param ws: Лист
+        """
         for i, col in enumerate(ws.iter_cols()):
             l = 0
             for cell in col:
