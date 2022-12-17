@@ -267,18 +267,18 @@ class InputConnect:
         """
         Метод для чтения данных с консоли и их сохранения
         """
-        if input() == '':
-            self.file_name = '../vacancies.csv'
-            self.vacancy = 'Аналитик'
-            self.method = 'Вакансии'
-        else:
-            self.file_name = input("Введите название файла: ")
-            self.vacancy = input("Введите название профессии: ")
-            self.method = input("Вакансии или статистика: ")
+        # if input() == '':
+        #     self.file_name = '../vacancies.csv'
+        #     self.vacancy = 'Аналитик'
+        #     self.method = 'Вакансии'
+        # else:
+        #     self.file_name = input("Введите название файла: ")
+        #     self.vacancy = input("Введите название профессии: ")
+        #     self.method = input("Вакансии или статистика: ")
 
-        # self.file_name = input("Введите название файла: ")
-        # self.vacancy = input("Введите название профессии: ")
-        # self.method = input("Вакансии или статистика: ")
+        self.file_name = input("Введите название файла: ")
+        self.vacancy = input("Введите название профессии: ")
+        self.method = input("Вакансии или статистика: ")
 
     @staticmethod
     def write_console(s_all, s_filtered, fract, cities_s):
