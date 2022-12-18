@@ -87,7 +87,7 @@ class Vacancy:
         >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).get_area()
         'Санкт-Петербург'
         >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).get_date()
-        '2022'
+        2022
         >>> Vacancy(['Руководитель', '<strong>Обязанности:</strong>', 'Организаторские', 'between3And6', 'FALSE', 'ПМЦ Авангард', '80000', '100000', 'FALSE', 'RUR', 'Санкт-Петербург', '2022-07-17T18:23:06+0300'], ['name', 'description', 'key_skills', 'experience_id', 'premium', 'employer_name', 'salary_from', 'salary_to', 'salary_gross', 'salary_currency', 'area_name', 'published_at']).is_suitible('Руководитель')
         True
         """
@@ -122,9 +122,9 @@ class Vacancy:
         """Возращает зарплату в рублях для данной вакансии"""
         return float(self.__salary)
 
-    def get_date(self) -> str:
+    def get_date(self) -> int:
         """Возвращает год размещения вакансии"""
-        return self.__published_at
+        return self.__published_at.year
 
     def get_area(self) -> str:
         """Возвращает город, в котором размещена данная вакансия"""
@@ -151,13 +151,13 @@ class Vacancy:
         self.__salary = Salary([self.__salary_from, self.__salary_to, self.__salary_currency])
 
     @staticmethod
-    def __get_date(date: str) -> str:
+    def __get_date(date: str) -> datetime:
         """
         Вычисляет из строки год
         :param date: Дата
         :return: float: Год
         """
-        return str(datetime.fromisoformat(date[:-2] + ":" + date[-2:]).year)
+        return datetime.fromisoformat(date[:-2] + ":" + date[-2:])
 
 
 class DataSet:
@@ -175,8 +175,8 @@ class DataSet:
         """
         self.__vacancies_objects: List[Vacancy] = []
         self.__title = None
-        self.__vacancies_years = {}
-        self.__vacancies_areas = {}
+        self.__vacancies_years: Dict[int, List[Vacancy]] = {}
+        self.__vacancies_areas: Dict[str, List[Vacancy]] = {}
         self.__len = 0
 
         with open(file_name, mode='r', encoding='utf-8-sig') as vacancies:
@@ -209,7 +209,7 @@ class DataSet:
         now_area.append(vacancy)
         self.__vacancies_areas[vacancy.get_area()] = now_area
 
-    def get_vacancies_years(self, func=None) -> Dict[str, List[int]]:
+    def get_vacancies_years(self, func=None) -> Dict[int, List[int]]:
         """
         Создает словарь с ключами-годами и значениями - массивами из зарплат в соответствии с фильтрующей
         функцией
@@ -256,7 +256,7 @@ class DataSet:
         return fract, cities_s
 
     @staticmethod
-    def get_structured_salaries(vacancies: Dict[str, list]) -> Dict[str, List[int]]:
+    def get_structured_salaries(vacancies: Dict[int, List[Vacancy]]) -> Dict[int, List[int]]:
         """
         Создает словарь с ключами-годами и значениями - массивами из зарплат
         :param vacancies: Датасет вакансий
@@ -423,8 +423,8 @@ class report:
     Класс для представления различных видов отчетов
     """
     def __init__(self, vacancy: str,
-                 s_all: Dict[str, List[int]],
-                 s_filtered: Dict[str, List[int]],
+                 s_all: Dict[int, List[int]],
+                 s_filtered: Dict[int, List[int]],
                  fract: List[List[float]],
                  cities_s: List[List[int]]):
         """
@@ -533,7 +533,7 @@ class report:
         pdfkit.from_string(pdf_template, 'report.pdf', configuration=config, options={"enable-local-file-access": None})
 
     @staticmethod
-    def __generate_rows_1(s_all: Dict[str, List[int]], s_filtered: Dict[str, List[int]]) -> List[Dict[str, str | int]]:
+    def __generate_rows_1(s_all: Dict[int, List[int]], s_filtered: Dict[int, List[int]]) -> List[Dict[str, str | int]]:
         """
         Метод для получения списка со статистикой по годам
         :param s_all: Словарь с ключами-годами и значениями - массивами из зарплат
@@ -586,8 +586,8 @@ class report:
     @staticmethod
     def __create_bar(
             ax,
-            data1: Dict[str, List[int]],
-            data2: Dict[str, List[int]],
+            data1: Dict[int, List[int]],
+            data2: Dict[int, List[int]],
             index: int,
             legend: List[str],
             title: str
@@ -657,7 +657,7 @@ class report:
         ax.set_title(title)
 
     @staticmethod
-    def __get_data(data: Dict[str, List[int]], i: int) -> List[int]:
+    def __get_data(data: Dict[int, List[int]], i: int) -> List[int]:
         """
         Метод для получения массива с данными для графика
         :param data: Словарь с ключами-годами и значениями - массивами из зарплат
@@ -669,8 +669,8 @@ class report:
     @staticmethod
     def __make_ws1(
             ws,
-            s_all: Dict[str, List[int]],
-            s_filtered: Dict[str, List[int]],
+            s_all: Dict[int, List[int]],
+            s_filtered: Dict[int, List[int]],
             title: Dict[str, str]
     ):
         """
@@ -779,7 +779,7 @@ class report:
             ws.column_dimensions[get_column_letter(i + 1)].width = l + 3 if l != 0 else 0
 
 
-if __name__ == '__main__':
+def main():
     connect = InputConnect()
     connect.read_console()
 
@@ -803,3 +803,7 @@ if __name__ == '__main__':
         rep.generate_excel()
         rep.generate_image()
         rep.generate_pdf()
+
+
+if __name__ == '__main__':
+    main()

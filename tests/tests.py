@@ -44,7 +44,7 @@ class VacancyTests(unittest.TestCase):
         self.assertEqual(self.vacancy.get_salary(), 90000.0)
 
     def test_vacancy_year(self):
-        self.assertEqual(self.vacancy.get_date(), '2022')
+        self.assertEqual(self.vacancy.get_date(), 2022)
 
     def test_vacancy_is_suitible(self):
         self.assertTrue(self.vacancy.is_suitible('Руководитель'))
