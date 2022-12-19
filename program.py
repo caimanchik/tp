@@ -5,15 +5,30 @@ import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 import os
 import pdfkit
+import cProfile
 
 from jinja2 import Environment, FileSystemLoader
 from functools import reduce
-from datetime import datetime
+from datetime import datetime, date
 from typing import List, Dict, Tuple
 from openpyxl import Workbook
 from openpyxl.styles import Side, Border, Font
 from openpyxl.styles.numbers import FORMAT_PERCENTAGE_00
 from openpyxl.utils import get_column_letter
+
+
+def profile(func):
+    """
+    Деоратор для профилирования функции
+    :param func: Функция профилирования
+    """
+    def wrapper(*args, **kwargs):
+        profile_filename = 'profile/' + func.__name__ + '.prof'
+        profiler = cProfile.Profile()
+        result = profiler.runcall(func, *args, **kwargs)
+        profiler.dump_stats(profile_filename)
+        return result
+    return wrapper
 
 
 class Salary:
@@ -124,7 +139,7 @@ class Vacancy:
 
     def get_date(self) -> int:
         """Возвращает год размещения вакансии"""
-        return self.__published_at.year
+        return self.__published_at
 
     def get_area(self) -> str:
         """Возвращает город, в котором размещена данная вакансия"""
@@ -151,18 +166,46 @@ class Vacancy:
         self.__salary = Salary([self.__salary_from, self.__salary_to, self.__salary_currency])
 
     @staticmethod
-    def __get_date(date: str) -> datetime:
+    def __get_date(date_str: str) -> int:
         """
         Вычисляет из строки год
-        :param date: Дата
+        :param date_str: Дата
         :return: float: Год
         """
-        return datetime.fromisoformat(date[:-2] + ":" + date[-2:])
+        return int(date_str[0:4])
+
+    # @staticmethod
+    # def __get_date(date: str) -> datetime:
+    #     """
+    #     Вычисляет из строки год
+    #     :param date: Дата
+    #     :return: float: Год
+    #     """
+    #     return datetime.fromisoformat(date[:-2] + ":" + date[-2:])
+
+    # @staticmethod
+    # def __get_date(date_str: str) -> datetime.date:
+    #     """
+    #     Вычисляет из строки год
+    #     :param date_str: Дата
+    #     :return: float: Год
+    #     """
+    #     return date.fromisoformat(date_str[0:10])
+
+    # @staticmethod
+    # def __get_date(date: str) -> datetime:
+    #     """
+    #     Вычисляет из строки год
+    #     :param date: Дата
+    #     :return: float: Дата
+    #     """
+    #     return datetime.strptime(date, '%Y-%m-%dT%H:%M:%S%z')
 
 
 class DataSet:
     """Класс, представляющий набор данных обо всех вакансиях"""
 
+    @profile
     def __init__(self, file_name: str):
         """
         Инициализирует объект Dataset
