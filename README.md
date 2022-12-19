@@ -16,7 +16,7 @@
 <img width="516" alt="Снимок экрана 2022-12-19 в 14 13 44" src="https://user-images.githubusercontent.com/79734984/208391522-5927b3ac-25f1-41b0-bf9a-e4be8e154583.png">
 <img width="1792" alt="Снимок экрана 2022-12-19 в 14 14 41" src="https://user-images.githubusercontent.com/79734984/208391542-691c4911-c1d0-46d6-a6e6-4de3b76272e1.png">
 
-<img width="516" alt="Снимок экрана 2022-12-19 в 14 13 44" src="https://user-images.githubusercontent.com/79734984/208391582-27ad14d8-25d4-4563-b532-51e8d03532ca.png">
+<img width="516" alt="Снимок экрана 2022-12-19 в 14 02 34" src="https://user-images.githubusercontent.com/79734984/208392156-c1eabe14-1ffc-47c7-b319-048ca5b9698f.png">
 <img width="1792" alt="Снимок экрана 2022-12-19 в 14 02 25" src="https://user-images.githubusercontent.com/79734984/208391615-db6e7685-8e37-4847-9191-5fc04b7681db.png">
 
 <img width="516" alt="Снимок экрана 2022-12-19 в 13 49 34" src="https://user-images.githubusercontent.com/79734984/208391679-2ebd4131-4865-4227-bb4d-33475716cca1.png">
